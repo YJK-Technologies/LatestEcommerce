@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const dataRoutes = require("./routes/dataRoutes");
 const app = express();
-const PORT = 5401;
+const PORT = 5508;
 
 app.use(cors());
 app.use(express.json({limit:'10mb'}));

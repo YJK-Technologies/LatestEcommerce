@@ -8,7 +8,7 @@ const dataRoutes = require("./routes/dataRoutes");
 const app = express();
 
 
-const HTTPS_PORT = 5401; // HTTPS server port
+const HTTPS_PORT = 5508; // HTTPS server port
 
 // SSL options for HTTPS
 const sslOptions = {

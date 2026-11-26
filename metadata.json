@@ -1,0 +1,6 @@
+{
+  "name": "AURA | Grand Premium E-Commerce Platform",
+  "description": "An enterprise-grade, luxury e-commerce shopping platform with 28+ categories, multi-step checkout, real-time tracking, product comparison, and an administrative control center.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

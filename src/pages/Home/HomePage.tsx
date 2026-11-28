@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+import { Category } from '../../types';
 import { useShop } from '../../context/ShopContext';
 import { ProductCard } from '../../components/Product/ProductCard';
 import {
@@ -14,8 +14,47 @@ import {
   Zap,
 } from 'lucide-react';
 
+
+const DepartmentCategoryCard: React.FC<{
+  cat: Category;
+  onSelect: (cat: Category) => void;
+}> = ({ cat, onSelect }) => {
+  const [isImgLoaded, setIsImgLoaded] = useState(false);
+
+  return (
+    <div
+      key={cat.id}
+      onClick={() => onSelect(cat)}
+      className="group p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 hover:shadow-lg transition-all duration-300 text-center cursor-pointer flex flex-col items-center"
+    >
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden mb-2.5 relative bg-slate-100 dark:bg-slate-800 shadow-inner group-hover:scale-105 transition-transform duration-300">
+        {!isImgLoaded && (
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-200 via-slate-300 to-slate-200 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800 animate-pulse backdrop-blur-md" />
+        )}
+        {cat.image && (
+          <img
+            src={cat.image}
+            alt={cat.name}
+            referrerPolicy="no-referrer"
+            onLoad={() => setIsImgLoaded(true)}
+            onError={() => setIsImgLoaded(false)}
+            className={`w-full h-full object-cover transition-all duration-500 ${isImgLoaded ? 'blur-0 opacity-100' : 'blur-md scale-110 opacity-0'
+              }`}
+          />
+        )}
+      </div>
+      <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
+        {cat.name}
+      </h3>
+      <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+        {(cat.productCount ?? 25)}+ Products
+      </span>
+    </div>
+  );
+};
+
 export const HomePage: React.FC = () => {
-  const { allProducts, bannersList, categoriesList, navigate, setSelectedCategorySlug, formatPrice } = useShop();
+  const { allProducts, bannersList, categoriesList, categoriesLoading, navigate, setSelectedCategorySlug, formatPrice } = useShop();
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -63,28 +102,31 @@ export const HomePage: React.FC = () => {
     navigate('products', { cat: cat.name });
   };
 
-  const renderDepartmentCard = (cat: (typeof categoriesList)[number]) => (
-    <div
-      key={cat.id}
-      onClick={() => handleSelectCategory(cat)}
-      className="group p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 hover:shadow-lg transition-all duration-300 text-center cursor-pointer flex flex-col items-center"
-    >
-      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden mb-2.5 relative bg-slate-100 dark:bg-slate-800 shadow-inner group-hover:scale-105 transition-transform duration-300">
-        <img
-          src={cat.image}
-          alt={cat.name}
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-cover"
-        />
-      </div>
-      <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
-        {cat.name}
-      </h3>
-      <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-        {(cat.productCount ?? 25)}+ Products
-      </span>
-    </div>
+  const renderDepartmentCard = (cat: Category) => (
+    <DepartmentCategoryCard key={cat.id} cat={cat} onSelect={handleSelectCategory} />
   );
+
+  const renderDepartmentGridItems = () => {
+    if (categoriesLoading) {
+      return Array.from({ length: 6 }).map((_, idx) => (
+        <div
+          key={`dept-blur-${idx}`}
+          className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col items-center"
+        >
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl mb-2.5 bg-slate-200 dark:bg-slate-800 animate-pulse blur-sm" />
+          <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-800 animate-pulse mb-1" />
+          <div className="h-2.5 w-14 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
+        </div>
+      ));
+    }
+
+    return categoriesList
+      .filter((c) => c.status !== 'Hidden')
+      .slice(0, 12)
+      .map(renderDepartmentCard);
+  };
+
+  const visibleCategoriesCount = categoriesList.filter((c) => c.status !== 'Hidden').length;
 
   return (
     <div className="space-y-12 pb-16">
@@ -200,16 +242,17 @@ export const HomePage: React.FC = () => {
             onClick={() => navigate('products')}
             className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
           >
-            <span>View All 28 Categories</span>
+            <span>
+              {categoriesLoading
+                ? 'View All Categories'
+                : `View All ${visibleCategoriesCount} Categories`}
+            </span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-          {categoriesList
-            .filter((c) => c.status !== 'Hidden')
-            .slice(0, 12)
-            .map(renderDepartmentCard)}
+          {renderDepartmentGridItems()}
         </div>
       </section>
 

@@ -23,10 +23,11 @@ export const AuthPage: React.FC = () => {
   );
   const [showPassword, setShowPassword] = useState(false);
 
-  // Sign In fields
-  const [loginIdentifier, setLoginIdentifier] = useState('v.roy@imperial.in');
-  const [loginPassword, setLoginPassword] = useState('password123');
+  // Sign In fields (Email ID + Password)
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   // Sign Up fields
   const [regName, setRegName] = useState('');
@@ -39,18 +40,33 @@ export const AuthPage: React.FC = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
 
-  const handleSignInSubmit = (e: React.FormEvent) => {
+  const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    const res = signIn(loginIdentifier, loginPassword);
-    if (!res.success) {
-      setErrorMsg(res.message);
+
+    const trimmedEmail = loginIdentifier.trim();
+    if (!trimmedEmail || !loginPassword) {
+      setErrorMsg('Please enter both Email ID and Password.');
       return;
     }
-    if (res.user?.role === 'admin') {
-      navigate('admin');
-    } else {
-      navigate(routeParams.redirect || 'home');
+
+    setIsSigningIn(true);
+    try {
+      const res = await signIn(trimmedEmail, loginPassword);
+      if (!res.success) {
+        setErrorMsg(res.message);
+        return;
+      }
+
+      if (res.user?.role === 'admin') {
+        navigate('admin');
+      } else {
+        navigate(routeParams.redirect || 'home');
+      }
+    } catch {
+      setErrorMsg('Unable to sign in right now. Please try again.');
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
@@ -81,14 +97,14 @@ export const AuthPage: React.FC = () => {
     showToast('OTP Sent (Demo)', 'Use verification code 1234 to sign in', 'info');
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     if (otpCode.trim() !== '1234') {
       setErrorMsg('Invalid OTP. For demo verification please enter 1234.');
       return;
     }
-    const res = signIn(otpPhone);
+    const res = await signIn(otpPhone);
     if (res.success) {
       navigate(routeParams.redirect || 'home');
     } else {
@@ -235,7 +251,7 @@ export const AuthPage: React.FC = () => {
             </div>
           )}
 
-          {/* SIGN IN FORM */}
+          {/* SIGN IN FORM (EMAIL LOGIN) */}
           {mode === 'signin' && (
             <form onSubmit={handleSignInSubmit} className="space-y-4 text-xs">
               <div>
@@ -243,23 +259,24 @@ export const AuthPage: React.FC = () => {
                   Sign in to AURA
                 </h2>
                 <p className="text-slate-500 mt-0.5">
-                  Enter your customer or admin credentials below.
+                  Enter your registered Email ID and Password.
                 </p>
               </div>
 
               <div>
                 <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">
-                  Email Address or Mobile Number
+                  Email Address
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
-                    type="text"
+                    type="email"
                     required
+                    disabled={isSigningIn}
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="e.g. v.roy@imperial.in or admin@aura.in"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="e.g. abimanyu@gmail.com or jk@yjktechnologies.com"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60"
                   />
                 </div>
               </div>
@@ -272,7 +289,7 @@ export const AuthPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() =>
-                      showToast('Reset Link Dispatched', 'Demo password is "password123" (Customer) or "admin123" (Admin)', 'info')
+                      showToast('Reset Link Dispatched', 'Contact your administrator if you forgot your password.', 'info')
                     }
                     className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer font-semibold"
                   >
@@ -284,10 +301,11 @@ export const AuthPage: React.FC = () => {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
+                    disabled={isSigningIn}
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60"
                   />
                   <button
                     type="button"
@@ -301,9 +319,10 @@ export const AuthPage: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                disabled={isSigningIn}
+                className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Sign In Securely</span>
+                <span>{isSigningIn ? 'Signing In...' : 'Sign In Securely'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 

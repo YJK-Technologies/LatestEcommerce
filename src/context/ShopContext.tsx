@@ -19,8 +19,6 @@ import {
   StoreSettings,
 } from '../types';
 import { products as initialProducts } from '../data/products';
-import { categories as initialCategories } from '../data/categories';
-import { fetchCategoriesMaster } from '../services/categoryService';
 import { heroBanners as initialBanners, BannerSlide } from '../data/banners';
 import { coupons as initialCoupons } from '../data/coupons';
 import { mockOrders as initialOrders } from '../data/mockOrders';
@@ -35,6 +33,10 @@ import {
   initialOfferCampaigns,
   defaultStoreSettings,
 } from '../data/adminMockData';
+
+//Services
+import { fetchCategoriesMaster } from '../services/categoryService';
+import { loginUserByEmail } from '../services/authService';
 
 export interface Toast {
   id: string;
@@ -54,7 +56,7 @@ interface ShopContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   registeredUsers: RegisteredUser[];
-  signIn: (emailOrPhone: string, password?: string) => { success: boolean; message: string; user?: RegisteredUser };
+  signIn: (emailOrPhone: string, password?: string) => Promise<{ success: boolean; message: string; user?: RegisteredUser }>;
   signUp: (data: { name: string; email: string; phone: string; password: string }) => { success: boolean; message: string };
   quickDemoLogin: (role: 'customer' | 'admin') => void;
   signOut: () => void;
@@ -62,6 +64,7 @@ interface ShopContextType {
   // Products & Categories & Banners (Shared between Storefront & Admin)
   allProducts: Product[];
   categoriesList: Category[];
+  categoriesLoading: boolean;
   refreshCategories: (companyCode?: string) => Promise<void>;
   brandsList: Brand[];
   bannersList: BannerSlide[];
@@ -324,37 +327,43 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [allProducts]);
 
-  const [categoriesList, setCategoriesList] = useState<Category[]>(() => {
-    try {
-      const saved = localStorage.getItem('aura_categories');
-      return saved ? JSON.parse(saved) : initialCategories.map((c) => ({ ...c, status: 'Active' }));
-    } catch {
-      return initialCategories.map((c) => ({ ...c, status: 'Active' }));
-    }
-  });
+  //With Default Localstorage Function
+  // const [categoriesList, setCategoriesList] = useState<Category[]>(() => {
+  //   try {
+  //     const saved = localStorage.getItem('aura_categories');
+  //     return saved ? JSON.parse(saved) : initialCategories.map((c) => ({ ...c, status: 'Active' }));
+  //   } catch {
+  //     return initialCategories.map((c) => ({ ...c, status: 'Active' }));
+  //   }
+  // });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('aura_categories', JSON.stringify(categoriesList));
-    } catch {
-      // ignore
-    }
-  }, [categoriesList]);
+  // useEffect(() => {
+  //   try {
+  //     localStorage.setItem('aura_categories', JSON.stringify(categoriesList));
+  //   } catch {
+  //     // ignore
+  //   }
+  // }, [categoriesList]);
+
+  const [categoriesList, setCategoriesList] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState<boolean>(true);
 
   const refreshCategories = async (companyCode?: string) => {
     const targetCompanyCode =
       companyCode ||
       (storeSettings as { companyCode?: string; company_code?: string }).companyCode ||
       (storeSettings as { companyCode?: string; company_code?: string }).company_code ||
-      'YJKT'; 
+      'YJKT';
 
+    setCategoriesLoading(true);
     try {
       const apiCategories = await fetchCategoriesMaster(targetCompanyCode);
-      if (apiCategories.length > 0) {
-        setCategoriesList(apiCategories);
-      }
+      setCategoriesList(apiCategories);
     } catch (err) {
       console.error('Error fetching categories master:', err);
+      setCategoriesList([]);
+    } finally {
+      setCategoriesLoading(false);
     }
   };
 
@@ -897,30 +906,30 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Authentication Handlers
-  const signIn = (emailOrPhone: string, password?: string) => {
-    const query = emailOrPhone.trim().toLowerCase();
-    const user = registeredUsers.find(
-      (u) => u.email.toLowerCase() === query || u.phone.replace(/\s+/g, '') === query.replace(/\s+/g, '')
+  const signIn = async (emailOrPhone: string, password?: string) => {
+    const credential = emailOrPhone.trim();
+
+    if (!credential || !password) {
+      const msg = 'Please enter both Email ID and Password';
+      showToast('Missing Credentials', msg, 'error');
+      return { success: false, message: msg };
+    }
+
+    const result = await loginUserByEmail(credential, password);
+
+    if (!result.success || !result.user) {
+      showToast('Sign In Failed', result.message, 'error');
+      return { success: false, message: result.message };
+    }
+
+    setAuthUser(result.user);
+    showToast(
+      'Welcome Back!',
+      `Signed in as ${result.user.name} (${result.user.role === 'admin' ? 'Admin Executive' : result.user.tier})`,
+      'success'
     );
 
-    if (!user) {
-      showToast('Account Not Found', 'No registered account found with these credentials', 'error');
-      return { success: false, message: 'No account found. Please check your email or Sign Up as a new user.' };
-    }
-
-    if (user.status === 'Blocked') {
-      showToast('Account Suspended', 'Please contact AURA Concierge support', 'error');
-      return { success: false, message: 'This account has been temporarily suspended by Admin.' };
-    }
-
-    if (password !== undefined && user.password !== password) {
-      showToast('Incorrect Password', 'Please verify your password and try again', 'error');
-      return { success: false, message: 'Incorrect password. Demo password is "password123" (or "admin123" for Admin).' };
-    }
-
-    setAuthUser(user);
-    showToast('Welcome Back!', `Signed in as ${user.name} (${user.role === 'admin' ? 'Admin Executive' : user.tier})`, 'success');
-    return { success: true, message: 'Signed in successfully', user };
+    return { success: true, message: result.message, user: result.user };
   };
 
   const signUp = (data: { name: string; email: string; phone: string; password: string }) => {
@@ -1234,6 +1243,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signOut,
         allProducts,
         categoriesList,
+        categoriesLoading,
         refreshCategories,
         brandsList,
         bannersList,

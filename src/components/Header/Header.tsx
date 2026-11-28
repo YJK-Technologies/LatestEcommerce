@@ -97,6 +97,8 @@ export const Header: React.FC = () => {
   const currentAddress =
     addresses.find((a) => a.id === selectedAddressId) || addresses[0];
 
+  const visibleCategoriesCount = categoriesList.filter((c) => c.status !== 'Hidden').length;
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
       {/* Top Announcement Bar */}
@@ -569,7 +571,7 @@ export const Header: React.FC = () => {
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0"
             >
               <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>All 28 Categories</span>
+              <span>All {visibleCategoriesCount} Categories</span>
               <ChevronDown className="w-3.5 h-3.5 opacity-70" />
             </button>
 
@@ -627,7 +629,7 @@ export const Header: React.FC = () => {
                   AURA Department Directory
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Browse over 28 luxury curated departments and premium international brand boutiques.
+                  Browse over {visibleCategoriesCount} luxury curated departments and premium international brand boutiques.
                 </p>
               </div>
               <button

@@ -1,17 +1,34 @@
-//server.js
+// //server.js
+// const express = require("express");
+// const cors = require("cors");
+// const dataRoutes = require("./routes/dataRoutes");
+// const app = express();
+// const PORT = 5508;
+
+// app.use(cors());
+// app.use(express.json({limit:'10mb'}));
+// app.use(express.urlencoded({ limit: "10mb", extended: true })); 
+
+// app.use("/", dataRoutes);
+
+
+// app.listen(PORT, () => {
+//   console.log(`Server is running on port ${PORT}`);
+// });
+
+// server.js (Local HTTP)
+require("dotenv").config();
 const express = require("express");
-const cors = require("cors");
 const dataRoutes = require("./routes/dataRoutes");
+const { applySecurityAndParsers } = require("./config/securityConfig");
+
 const app = express();
-const PORT = 5401;
+const PORT = Number(process.env.PORT);
+const bodyLimit = process.env.JSON_BODY_LIMIT;
 
-app.use(cors());
-app.use(express.json({limit:'10mb'}));
-app.use(express.urlencoded({ limit: "10mb", extended: true })); 
-
+applySecurityAndParsers(app, bodyLimit);
 app.use("/", dataRoutes);
 
-
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Local server running on http://localhost:${PORT}`);
 });
